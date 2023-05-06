@@ -11,6 +11,8 @@ if "--unsafe" in sys.argv:
     import ssl
     ssl._create_default_https_context = ssl._create_unverified_context
 
+
+
 num_epochs = 20
 batch_size_train = 64
 batch_size_test = 64
@@ -67,12 +69,21 @@ train_loader = torch.utils.data.DataLoader(
                              ),
   batch_size=batch_size_train, shuffle=True)
 
+
+# The test set is to be used only for the final evaluation
+"""
 test_loader = torch.utils.data.DataLoader(
   torchvision.datasets.Flowers102('/files/', split = "test", download=True,
                              transform= transform1
                              ),
-
  batch_size=batch_size_test, shuffle=False)
+"""
+
+validation_loader = torch.utils.data.DataLoader(
+    torchvision.datasets.Flowers102('/files/', split = "val", download=True,
+                                transform= transform1
+                                ),
+    batch_size=batch_size_test, shuffle=False)
 
 mean = 0 
 s_deviation = 0
@@ -109,7 +120,7 @@ def test():
     total_samples = 0
 
     # loop over the batches in the test data
-    for data, target in test_loader:
+    for data, target in validation_loader:
 
         # forward pass through the model
         output = network(data)
