@@ -1,11 +1,15 @@
 import torch
-import torch
 import torchvision
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import torchvision.transforms as transforms
+from torch import nn
+from torch.nn import functional as F
+from torch import optim
+from torchvision import transforms
 
+import sys
+
+if "--unsafe" in sys.argv:
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context
 
 num_epochs = 20
 batch_size_train = 64
