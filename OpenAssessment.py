@@ -59,44 +59,44 @@ network = Net()
 optimizer = torch.optim.Adam(network.parameters(), lr=0.00001)
 
 
-transform1= transforms.Compose([
+transformer = transforms.Compose([
     transforms.ToTensor(),
     transforms.Resize((64, 64))])  # Resize the images to a consistent size
 
-train_loader = torch.utils.data.DataLoader(
+init_train_loader = torch.utils.data.DataLoader(
   torchvision.datasets.Flowers102('/files/',split = "train", download=True,
-                             transform= transform1
+                             transform=transformer
                              ),
   batch_size=batch_size_train, shuffle=True)
 
 
-# The test set is to be used only for the final evaluation
-"""
-test_loader = torch.utils.data.DataLoader(
-  torchvision.datasets.Flowers102('/files/', split = "test", download=True,
-                             transform= transform1
-                             ),
- batch_size=batch_size_test, shuffle=False)
-"""
-
 validation_loader = torch.utils.data.DataLoader(
     torchvision.datasets.Flowers102('/files/', split = "val", download=True,
-                                transform= transform1
+                                transform=transformer
                                 ),
     batch_size=batch_size_test, shuffle=False)
 
+
+# The test set is to be used only for the final evaluation
+test_loader = torch.utils.data.DataLoader(
+  torchvision.datasets.Flowers102('/files/', split = "test", download=True,
+                             transform=transformer
+                             ),
+ batch_size=batch_size_test, shuffle=False)
+
+
 mean = 0 
 s_deviation = 0
-for images, _ in train_loader:
+for images, _ in init_train_loader:
     batch = images.size(0)
     images = images.view(batch, images.size(1), -1)
     mean+= images.mean(2).sum(0)
     s_deviation+= images.std(2).sum(0)
 
-mean /= len(train_loader.dataset)
-s_deviation /= len(train_loader.dataset)
+mean /= len(init_train_loader.dataset)
+s_deviation /= len(init_train_loader.dataset)
 
-transform2 = transforms.Compose([
+transformer_augmenter = transforms.Compose([
     transforms.ToTensor(),
     transforms.RandomHorizontalFlip(0.2),
     transforms.RandomVerticalFlip(0.2),
@@ -106,12 +106,16 @@ transform2 = transforms.Compose([
 
 train_loader = torch.utils.data.DataLoader(
   torchvision.datasets.Flowers102('/files/',split = "train", download=True,
-                             transform= transform2
+                             transform=transformer_augmenter
                              ),
   batch_size=batch_size_train, shuffle=True)
 
 
-def test():
+
+def validate():
+    """
+    Used to check how the model is performing while it is training.
+    """
     # set the model to evaluation mode
     network.eval()
 
@@ -119,8 +123,41 @@ def test():
     total_correct = 0
     total_samples = 0
 
-    # loop over the batches in the test data
+    # loop over the batches in the validation data
     for data, target in validation_loader:
+
+        # forward pass through the model
+        output = network(data)
+
+        # get the predicted class for each example in the batch
+        _, predicted = torch.max(output, 1)
+
+        # calculate the number of correct predictions in this batch
+        batch_correct = (predicted == target).sum().item()
+        # add the number of correct predictions in this batch to the total
+        total_correct += batch_correct
+        total_samples += target.size(0)
+
+    # calculate the overall accuracy
+    accuracy = 100 * (total_correct / total_samples)
+
+    print('Validation accuracy: {:.4f}%'.format(accuracy))
+    return accuracy
+
+
+def test():
+    """
+    **ONLY USE AFTER FINISHING TRAINGING.**
+    This is used to evaludate the model after it has finished training.
+    """
+
+    network.eval()
+
+    # keep track of the total number of correct predictions
+    total_correct = 0
+    total_samples = 0
+
+    for data, target in test_loader:
 
         # forward pass through the model
         output = network(data)
@@ -141,37 +178,52 @@ def test():
     return accuracy
 
 
+def train():
+    # loop over the epochs
+    for epoch in range(num_epochs):
 
-# loop over the epochs
-for epoch in range(num_epochs):
+        # set the model to train mode
+        network.train()
 
-    # set the model to train mode
-    network.train()
+        # loop over the batches in the training data
+        for batch_idx, (data, target) in enumerate(train_loader):
 
-    # loop over the batches in the training data
-    for batch_idx, (data, target) in enumerate(train_loader):
+            # zero the gradients for this batch
+            optimizer.zero_grad()
 
-        # zero the gradients for this batch
-        optimizer.zero_grad()
+            # forward pass through the model
+            output = network(data)
 
-        # forward pass through the model
-        output = network(data)
+            # calculate the loss
+            loss = criterion(output, target)
 
-        # calculate the loss
-        loss = criterion(output, target)
+            # backward pass through the model to calculate the gradients
+            loss.backward()
 
-        # backward pass through the model to calculate the gradients
-        loss.backward()
+            # update the parameters using the gradients and optimizer
+            optimizer.step()
 
-        # update the parameters using the gradients and optimizer
-        optimizer.step()
+            # print the loss for every 10 batches
+            if batch_idx % 5 == 0:
+                print('Epoch [{}/{}], Batch [{}/{}], Loss: {:.4f}'.format(epoch, num_epochs, batch_idx, len(train_loader), loss.item()))
+                
 
-        # print the loss for every 10 batches
-        if batch_idx % 5 == 0:
-            print('Epoch [{}/{}], Batch [{}/{}], Loss: {:.4f}'.format(epoch, num_epochs, batch_idx, len(train_loader), loss.item()))
+        if epoch % 2 == 0:
+            validate()
 
-    if epoch % 2 == 0:
-        test()
-  
 
-print("Final Accuracy:{accuracy}%")
+    print(f"Training accuracy:{round(validate(), 4)}%")
+
+
+
+def main():
+    print("\n== Starting training. ==")
+    train()
+    print("== Finished training. ==")
+    accuracy = test()
+    print(f"Final Accuracy:{round(accuracy, 4)}%")
+    print("== Finished testing. ==")
+
+
+if __name__ == "__main__":
+    main()
