@@ -1,67 +1,15 @@
 import torch
+import torch
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 
 
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# hyperparameters
-n_epochs = 15
+num_epochs = 20
 batch_size_train = 64
 batch_size_test = 64
-learning_rate = 0.00005
-log_interval = 10
-
-
-transform1= transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Resize((64, 64))])  # Resize the images to a consistent size
-
-train_loader = torch.utils.data.DataLoader(
-  torchvision.datasets.Flowers102('/files/',split = "train", download=True,
-                             transform= transform1
-                             ),
-  batch_size=batch_size_train, shuffle=True)
-
-test_loader = torch.utils.data.DataLoader(
-  torchvision.datasets.Flowers102('/files/', split = "test", download=True,
-                             transform= transform1
-                             ),
-
- batch_size=batch_size_test, shuffle=False)
-
-
-mean = 0 
-s_deviation = 0
-for images, _ in train_loader:
-    batch = images.size(0)
-    images = images.view(batch, images.size(1), -1)
-    mean+= images.mean(2).sum(0)
-    s_deviation+= images.std(2).sum(0)
-
-mean /= len(train_loader.dataset)
-s_deviation /= len(train_loader.dataset)
-
-transform2 = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.RandomHorizontalFlip(0.2),
-    transforms.RandomVerticalFlip(0.2),
-    transforms.RandomRotation(55),
-    transforms.Resize((64, 64)),  # Resize the images to a consistent size,
-    transforms.Normalize(mean = mean, std = s_deviation)  # Normalize the image tensors
-])
-
-train_loader = torch.utils.data.DataLoader(
-  torchvision.datasets.Flowers102('/files/',split = "train", download=True,
-                             transform= transform2
-                             ),
-  batch_size=batch_size_train, shuffle=True)
-
 
 
 
@@ -91,71 +39,124 @@ class Net(nn.Module):
         x = F.relu(self.layer2(x))
         x = self.pool1(x)
         x = self.conv3(x)
-        x = F.relu(self.layer3(x))
         x = self.Flatten(x)
-
         x = self.fc1(x)
         x = self.fc2(x)
         x = self.fc3(x)
         return x
 
-network = Net().to(device)
-loss_func = nn.CrossEntropyLoss()
-optimizer = optim.Adam(network.parameters(), lr=learning_rate)
-"""scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)"""
-best_acc = 0
-train_losses = []
-train_counter = []
-test_losses = []
-test_counter = [i*len(train_loader.dataset) for i in range(n_epochs + 1)]
+# define your loss function
+criterion = torch.nn.CrossEntropyLoss()
+
+# define your optimizer
+network = Net()
+optimizer = torch.optim.Adam(network.parameters(), lr=0.00001)
+
+
+transform1= transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Resize((64, 64))])  # Resize the images to a consistent size
+
+train_loader = torch.utils.data.DataLoader(
+  torchvision.datasets.Flowers102('/files/',split = "train", download=True,
+                             transform= transform1
+                             ),
+  batch_size=batch_size_train, shuffle=True)
+
+test_loader = torch.utils.data.DataLoader(
+  torchvision.datasets.Flowers102('/files/', split = "test", download=True,
+                             transform= transform1
+                             ),
+
+ batch_size=batch_size_test, shuffle=False)
+
+mean = 0 
+s_deviation = 0
+for images, _ in train_loader:
+    batch = images.size(0)
+    images = images.view(batch, images.size(1), -1)
+    mean+= images.mean(2).sum(0)
+    s_deviation+= images.std(2).sum(0)
+
+mean /= len(train_loader.dataset)
+s_deviation /= len(train_loader.dataset)
+
+transform2 = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.RandomHorizontalFlip(0.2),
+    transforms.RandomVerticalFlip(0.2),
+    transforms.RandomRotation(55),
+    transforms.Resize((64, 64)),  # Resize the images to a consistent size,
+    transforms.Normalize(mean = mean, std = s_deviation)])  # Normalize the image tensors
+
+train_loader = torch.utils.data.DataLoader(
+  torchvision.datasets.Flowers102('/files/',split = "train", download=True,
+                             transform= transform2
+                             ),
+  batch_size=batch_size_train, shuffle=True)
 
 
 def test():
-  network.eval()
-  with torch.no_grad():
-    correct = 0
-    samples = 0
-    n_correct = [0 for i in range(102)]
-    n_samples = [0 for i in range(102)]
-    for images, labels in test_loader:
-       images = images.to(device)
-       labels = labels.to(device)
-       output = network(images)
-       _, predicted = torch.max(output,1)
-       samples += labels.size(0)
-       correct += (predicted == labels).sum().item() 
-       for i in range(len(labels)):
-            pred = predicted[i]
-            label = labels[i]
-            if label == pred:
-                n_correct[label] +=1
-            n_samples[label] +=1
-    accuracy = 100.0 * correct / samples
-    print('Accuracy: {}/{} ({:.2f}%)\n'.format(correct, len(test_loader.dataset), accuracy))
-    network.train()
+    # set the model to evaluation mode
+    network.eval()
+
+    # keep track of the total number of correct predictions
+    total_correct = 0
+    total_samples = 0
+
+    # loop over the batches in the test data
+    for data, target in test_loader:
+
+        # forward pass through the model
+        output = network(data)
+
+        # get the predicted class for each example in the batch
+        _, predicted = torch.max(output, 1)
+
+        # calculate the number of correct predictions in this batch
+        batch_correct = (predicted == target).sum().item()
+        # add the number of correct predictions in this batch to the total
+        total_correct += batch_correct
+        total_samples += target.size(0)
+
+    # calculate the overall accuracy
+    accuracy = 100 * (total_correct / total_samples)
+
+    print('Test accuracy: {:.4f}%'.format(accuracy))
     return accuracy
-    
-for epoch in range(n_epochs):
-    for i, (images, image_labels) in enumerate(train_loader):
-            images = images.to(device)
-            image_labels = image_labels.to(device)
-            label_pred = network(images)
-            loss = loss_func(label_pred, image_labels)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            """print("Epoch Number =" + str(epoch)+ "Index = ", str(i), "/", str(len(train_loader)-1), "loss" + str(loss.item()))"""
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, i * len(images), len(train_loader.dataset),
-                100. * i / len(train_loader), loss.item()))
-            if i % log_interval == 0:
-                train_losses.append(loss.item())
-                train_counter.append(
-                (i*64) + ((epoch-1)*len(train_loader.dataset)))
 
-    current_acc = test() 
-    if current_acc > best_acc:
-        best_acc = current_acc
-        torch.save(network.state_dict(), "model.pth")       
 
-             
+
+# loop over the epochs
+for epoch in range(num_epochs):
+
+    # set the model to train mode
+    network.train()
+
+    # loop over the batches in the training data
+    for batch_idx, (data, target) in enumerate(train_loader):
+
+        # zero the gradients for this batch
+        optimizer.zero_grad()
+
+        # forward pass through the model
+        output = network(data)
+
+        # calculate the loss
+        loss = criterion(output, target)
+
+        # backward pass through the model to calculate the gradients
+        loss.backward()
+
+        # update the parameters using the gradients and optimizer
+        optimizer.step()
+
+        # print the loss for every 10 batches
+        if batch_idx % 5 == 0:
+            print('Epoch [{}/{}], Batch [{}/{}], Loss: {:.4f}'.format(epoch, num_epochs, batch_idx, len(train_loader), loss.item()))
+
+    if epoch % 2 == 0:
+        test()
+  
+
+print("Final Accuracy:{accuracy}%")
