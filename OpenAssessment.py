@@ -12,6 +12,8 @@ if "--unsafe" in sys.argv:
     ssl._create_default_https_context = ssl._create_unverified_context
 
 
+DATA_LOCATION = "files"
+
 
 num_epochs = 20
 batch_size_train = 64
@@ -64,14 +66,14 @@ transformer = transforms.Compose([
     transforms.Resize((64, 64))])  # Resize the images to a consistent size
 
 init_train_loader = torch.utils.data.DataLoader(
-  torchvision.datasets.Flowers102('/files/',split = "train", download=True,
+  torchvision.datasets.Flowers102(DATA_LOCATION,split = "train", download=True,
                              transform=transformer
                              ),
   batch_size=batch_size_train, shuffle=True)
 
 
 validation_loader = torch.utils.data.DataLoader(
-    torchvision.datasets.Flowers102('/files/', split = "val", download=True,
+    torchvision.datasets.Flowers102(DATA_LOCATION, split = "val", download=True,
                                 transform=transformer
                                 ),
     batch_size=batch_size_test, shuffle=False)
@@ -79,7 +81,7 @@ validation_loader = torch.utils.data.DataLoader(
 
 # The test set is to be used only for the final evaluation
 test_loader = torch.utils.data.DataLoader(
-  torchvision.datasets.Flowers102('/files/', split = "test", download=True,
+  torchvision.datasets.Flowers102(DATA_LOCATION, split = "test", download=True,
                              transform=transformer
                              ),
  batch_size=batch_size_test, shuffle=False)
@@ -105,7 +107,7 @@ transformer_augmenter = transforms.Compose([
     transforms.Normalize(mean = mean, std = s_deviation)])  # Normalize the image tensors
 
 train_loader = torch.utils.data.DataLoader(
-  torchvision.datasets.Flowers102('/files/',split = "train", download=True,
+  torchvision.datasets.Flowers102(DATA_LOCATION,split = "train", download=True,
                              transform=transformer_augmenter
                              ),
   batch_size=batch_size_train, shuffle=True)
