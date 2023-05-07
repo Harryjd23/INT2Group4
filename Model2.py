@@ -49,17 +49,24 @@ criterion = torch.nn.CrossEntropyLoss()
 
 # define your optimizer
 network = Net().to(device)
-torch.save(network.state_dict(), 'BestModel.pth')
-optimizer = optim.Adam(network.parameters(), lr=0.00001, betas = (0.9,0.999), weight_decay = 0.01)
+optimizer = optim.Adam(network.parameters(), lr=0.00001, weight_decay = 0.01)
 best_acc = 0
 
 transform1= transforms.Compose([
     transforms.ToTensor(),
-    transforms.Resize((64, 64))])  # Resize the images to a consistent size
+    transforms.Resize((64, 64)),
+    transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])  # Resize the images to a consistent size
+
+transform2 = transforms.Compose([
+    transforms.RandomRotation(25),
+    transforms.RandomHorizontalFlip(),
+    transforms.Resize((64,64)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])
 
 train_loader = torch.utils.data.DataLoader(
   torchvision.datasets.Flowers102(DATA_LOCATION,split = "train", download=True,
-                             transform= transform1
+                             transform= transform2
                              ),
   batch_size=batch_size_train, shuffle=True)
 
@@ -77,24 +84,9 @@ test_loader = torch.utils.data.DataLoader(
 
  batch_size=batch_size_test, shuffle=False)
 
-transform2 = transforms.Compose([
-    transforms.RandomRotation(25),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomResizedCrop((64,64)),
-    transforms.ToTensor(),
-  # Resize the images to a consistent size,
-    transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])# Normalize the image tensors
-
-train_loader = torch.utils.data.DataLoader(
-  torchvision.datasets.Flowers102(DATA_LOCATION,split = "train", download=True,
-                             transform= transform2
-                             ),
-  batch_size=batch_size_train, shuffle=True)
-
 
 # loop over the epochs
 def train(epoch):
-    network.load_state_dict(torch.load("BestModel.pth"))
     train_loss = 0
     correct = 0
     total = 0
@@ -126,13 +118,13 @@ def train(epoch):
         epoch, i*len(data), len(train_loader.dataset),100* i / len(train_loader),
         loss))
     print(correct,total)
-    train_accuracy = 100 * correct / total
-    train_loss = train_loss / len(train_loader)
-    return train_loss, train_accuracy
+    accuracy = 100 * correct / total
+    loss = train_loss / len(train_loader)
+    return loss, accuracy
 
 def validate():
     network.eval()
-    val_loss = 0
+    test_loss = 0
     correct = 0
     total = 0
     with torch.no_grad():
@@ -141,16 +133,16 @@ def validate():
             target = target.to(device)
             output = network(data)
             loss = criterion(output, target)
-            val_loss += loss.item()
+            test_loss += loss.item()
             _, predicted = torch.max(output.data, 1)
             correct += (predicted == target).sum().item()
             total += target.size(0)
-        val_accuracy = 100 * correct / total
-        val_loss = val_loss / len(val_loader)
+        accuracy = 100 * correct / total
+        loss = test_loss / len(val_loader)
 
-        print('Validate accuracy: {:.4f}%'.format(val_accuracy))
+        print('Validate accuracy: {:.4f}%'.format(accuracy))
         print(correct,total)
-        return val_loss, val_accuracy
+        return loss, accuracy
 
 
 def test():
@@ -169,12 +161,12 @@ def test():
             _, predicted = torch.max(output.data, 1)
             correct += (predicted == target).sum().item()
             total += target.size(0)
-        test_accuracy = 100 * correct / total
-        test_loss = test_loss / len(test_loader)
+        accuracy = 100 * correct / total
+        loss = test_loss / len(test_loader)
 
-        print('Test accuracy: {:.4f}%'.format(test_accuracy))
+        print('Test accuracy: {:.4f}%'.format(accuracy))
         print(correct,total)
-        return test_loss, test_accuracy
+        return loss, accuracy
 
 for epoch in range(n_epochs):
     train_loss, train_acc = train(epoch)
@@ -185,5 +177,5 @@ for epoch in range(n_epochs):
             torch.save(network.state_dict(), 'BestModel.pth')
             network.load_state_dict(torch.load("BestModel.pth"))
 
-    print(f'Epoch [{epoch}/{n_epochs}], Train Loss: {train_loss:.4f}, Valid Loss: {valid_loss:.4f}, Train Acc: {train_acc:.2f}%, Valid Acc: {valid_acc:.2f}%')
+    print(f'Epoch [{epoch}/{n_epochs}], Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.2f}%')
 test()
