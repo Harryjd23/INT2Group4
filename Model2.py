@@ -14,9 +14,9 @@ if "--unsafe" in sys.argv:
 
 DATA_LOCATION = "files"
 
-n_epochs = 10
-batch_size_train = 64
-batch_size_test = 64
+n_epochs = 50
+batch_size_train = 32
+batch_size_test = 32
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -54,15 +54,15 @@ best_acc = 0
 
 transform1= transforms.Compose([
     transforms.ToTensor(),
-    transforms.Resize((64, 64)),
-    transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])  # Resize the images to a consistent size
+    transforms.Resize((64, 64))])
+"""transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])"""  # Resize the images to a consistent size
 
 transform2 = transforms.Compose([
     transforms.RandomRotation(25),
     transforms.RandomHorizontalFlip(),
     transforms.Resize((64,64)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])
+    transforms.ToTensor()])
+"""transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])"""
 
 train_loader = torch.utils.data.DataLoader(
   torchvision.datasets.Flowers102(DATA_LOCATION,split = "train", download=True,
@@ -124,7 +124,7 @@ def train(epoch):
 
 def validate():
     network.eval()
-    test_loss = 0
+    val_loss = 0
     correct = 0
     total = 0
     with torch.no_grad():
@@ -133,15 +133,12 @@ def validate():
             target = target.to(device)
             output = network(data)
             loss = criterion(output, target)
-            test_loss += loss.item()
+            val_loss += loss.item()
             _, predicted = torch.max(output.data, 1)
             correct += (predicted == target).sum().item()
             total += target.size(0)
         accuracy = 100 * correct / total
-        loss = test_loss / len(val_loader)
-
-        print('Validate accuracy: {:.4f}%'.format(accuracy))
-        print(correct,total)
+        loss = val_loss / total
         return loss, accuracy
 
 
@@ -162,20 +159,18 @@ def test():
             correct += (predicted == target).sum().item()
             total += target.size(0)
         accuracy = 100 * correct / total
-        loss = test_loss / len(test_loader)
+        loss = test_loss / total
 
         print('Test accuracy: {:.4f}%'.format(accuracy))
-        print(correct,total)
         return loss, accuracy
 
 for epoch in range(n_epochs):
     train_loss, train_acc = train(epoch)
-    if epoch % 2 == 0:
+    if epoch % 1 == 0:
         valid_loss, valid_acc = validate()
         if valid_acc > best_acc:
             best_acc = valid_acc
             torch.save(network.state_dict(), 'BestModel.pth')
             network.load_state_dict(torch.load("BestModel.pth"))
-
-    print(f'Epoch [{epoch}/{n_epochs}], Valid Loss: {valid_loss:.4f}, Valid Acc: {valid_acc:.2f}%')
+    print(f'Epoch [{epoch+1}/{n_epochs}], Train Loss: {train_loss:.4f}, Valid Acc: {valid_acc:.2f}%')
 test()
