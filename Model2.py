@@ -23,15 +23,16 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 128, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(128)
+        self.conv1 = nn.Conv2d(3, 128, kernel_size=3, padding=1)  # Convolution 1.
+        self.bn1 = nn.BatchNorm2d(128)  # Batch Normalization 1.
         self.conv2 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(256)
         self.conv3 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm2d(512)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(32768, 4096)
+        self.fc1 = nn.Linear(32768, 4096)  # Fully Connected layer 1.
         self.fc2 = nn.Linear(4096, 102)
+        self.act_final = nn.Softmax(-1)  # Final activation function.
 
     def forward(self, x):
         x = F.relu(self.bn1(self.conv1(x)))
@@ -43,14 +44,17 @@ class Net(nn.Module):
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
+
+        # Please remove the line below if it does not prove helpful after a lot of training.
+        #x = self.act_final(x)  # This line severely hampers training performance, but I haven't tested what happens after much more training, does it improve accuracy later on?
         return x
+
 # define your loss function
 criterion = torch.nn.CrossEntropyLoss()
 
 # define your optimizer
 network = Net().to(device)
 optimizer = optim.Adam(network.parameters(), lr=0.00001, weight_decay = 0.01)
-best_acc = 0
 
 transform1= transforms.Compose([
     transforms.ToTensor(),
@@ -164,13 +168,22 @@ def test():
         print('Test accuracy: {:.4f}%'.format(accuracy))
         return loss, accuracy
 
-for epoch in range(n_epochs):
-    train_loss, train_acc = train(epoch)
-    if epoch % 1 == 0:
-        valid_loss, valid_acc = validate()
-        if valid_acc > best_acc:
-            best_acc = valid_acc
-            torch.save(network.state_dict(), 'BestModel.pth')
-            network.load_state_dict(torch.load("BestModel.pth"))
-    print(f'Epoch [{epoch+1}/{n_epochs}], Train Loss: {train_loss:.4f}, Valid Acc: {valid_acc:.2f}%')
-test()
+
+def main():
+    best_acc = 0
+
+    for epoch in range(n_epochs):
+        train_loss, train_acc = train(epoch)
+        if epoch % 1 == 0:
+            valid_loss, valid_acc = validate()
+            if valid_acc > best_acc:
+                best_acc = valid_acc
+                torch.save(network.state_dict(), 'BestModel.pth')
+                network.load_state_dict(torch.load("BestModel.pth"))
+        print(f'Epoch [{epoch+1}/{n_epochs}], Train Loss: {train_loss:.4f}, Valid Acc: {valid_acc:.2f}%')
+    test()
+
+
+if __name__ == '__main__':
+    # This means we can import the neural network without running training, so we can generate pictures of it.
+    main()
