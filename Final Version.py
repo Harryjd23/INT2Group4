@@ -6,12 +6,14 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 import sys
 
-# Prevents Errors?
+# Do not use this, it is unsafe. (It might help if you are having SSL certificate issues with the dataset.)
 if "--unsafe" in sys.argv:
     import ssl
     ssl._create_default_https_context = ssl._create_unverified_context
 
-# Force to use CPU instead of RAM?
+
+# Use this command line option to force using CPU instead of GPU, even if a GPU is available.
+# This helps with VRAM bottlenecks because now it just uses main memory (but is much slower).
 FORCE_CPU = False
 if "--cpu" in sys.argv:
     FORCE_CPU = True
@@ -22,7 +24,7 @@ DATA_LOCATION = "files"
 # Image Dimensions for Transformations
 IMAGE_W = 128
 IMAGE_H = 128
-IMAGE_MAT_WIDTH = 16384
+IMAGE_MAT_WIDTH = 4096
 
 # Hyperparameters
 n_epochs = 200
@@ -137,6 +139,10 @@ test_loader = torch.utils.data.DataLoader(
 
 # Loop over the epochs
 def train(epoch):
+    """ Loop over all the training data `epoch` times and train the network.
+    
+    Returns the training loss and accuracy (convenient but aren't the best metrics to use).
+    """
     train_loss = 0
     correct = 0
     total = 0
@@ -177,6 +183,10 @@ def train(epoch):
     return loss, accuracy
 
 def validate():
+    """ Loop over all the validation data and check the performance of the model.
+     
+    This is for use between training epochs.
+    """
     network.eval() # Set the model to evaluate Mode
     val_loss = 0
     correct = 0
@@ -197,6 +207,9 @@ def validate():
 
 
 def test():
+    """Loop over all the final test data and report the performance of the fully trained model.
+    ### Only to be used at the end of training.
+    """
     # set the model to evaluation mode
     network.eval()
     test_loss = 0
@@ -220,6 +233,7 @@ def test():
 
 
 def main():
+    """ Run through training and validation, then test and save the model. """
     best_acc = 0
 
     for epoch in range(n_epochs+1):
