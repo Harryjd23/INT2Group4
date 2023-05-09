@@ -1,5 +1,4 @@
 import torch
-import torch
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,7 +13,7 @@ if "--unsafe" in sys.argv:
 
 DATA_LOCATION = "files"
 
-n_epochs = 50
+n_epochs = 125
 batch_size_train = 32
 batch_size_test = 32
 
@@ -29,9 +28,11 @@ class Net(nn.Module):
         self.bn2 = nn.BatchNorm2d(256)
         self.conv3 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm2d(512)
+        self.conv4 = nn.Conv2d(512, 1024, kernel_size=3, padding=1)
+        self.bn4 = nn.BatchNorm2d(1024)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(32768, 4096)  # Fully Connected layer 1.
-        self.fc2 = nn.Linear(4096, 102)
+        self.fc1 = nn.Linear(16384, 4096)  # Fully Connected layer 1.
+        self.fc2 = nn.Linear(4096,102)
         self.act_final = nn.Softmax(-1)  # Final activation function.
 
     def forward(self, x):
@@ -41,8 +42,11 @@ class Net(nn.Module):
         x = self.pool(x)
         x = F.relu(self.bn3(self.conv3(x)))
         x = self.pool(x)
+        x = self.conv4(x)
+        x = self.bn4(x)
+        x = self.pool(x)
         x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
+        x = self.fc1(x)
         x = self.fc2(x)
 
         # Please remove the line below if it does not prove helpful after a lot of training.
@@ -55,6 +59,7 @@ criterion = torch.nn.CrossEntropyLoss()
 # define your optimizer
 network = Net().to(device)
 optimizer = optim.Adam(network.parameters(), lr=0.00001, weight_decay = 0.01)
+scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.999)
 
 transform1= transforms.Compose([
     transforms.ToTensor(),
@@ -63,7 +68,7 @@ transform1= transforms.Compose([
 
 transform2 = transforms.Compose([
     transforms.RandomRotation(25),
-    transforms.RandomHorizontalFlip(),
+    transforms.RandomHorizontalFlip(0.3),
     transforms.Resize((64,64)),
     transforms.ToTensor()])
 """transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])"""
@@ -124,6 +129,7 @@ def train(epoch):
     print(correct,total)
     accuracy = 100 * correct / total
     loss = train_loss / len(train_loader)
+    scheduler.step()
     return loss, accuracy
 
 def validate():
@@ -172,7 +178,7 @@ def test():
 def main():
     best_acc = 0
 
-    for epoch in range(n_epochs):
+    for epoch in range(n_epochs+1):
         train_loss, train_acc = train(epoch)
         if epoch % 1 == 0:
             valid_loss, valid_acc = validate()
@@ -180,7 +186,7 @@ def main():
                 best_acc = valid_acc
                 torch.save(network.state_dict(), 'BestModel.pth')
                 network.load_state_dict(torch.load("BestModel.pth"))
-        print(f'Epoch [{epoch+1}/{n_epochs}], Train Loss: {train_loss:.4f}, Valid Acc: {valid_acc:.2f}%')
+        print(f'Epoch [{epoch}/{n_epochs}], Train Loss: {train_loss:.4f}, Valid Acc: {valid_acc:.2f}%')
     test()
 
 
