@@ -6,12 +6,13 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 import sys
 
-# Prevents Errors?
+# Do not use this, it is unsafe. (It might help if you are having SSL certificate issues with the dataset.)
 if "--unsafe" in sys.argv:
     import ssl
     ssl._create_default_https_context = ssl._create_unverified_context
 
-# Force to use CPU instead of RAM?
+# Use this command line option to force using CPU instead of GPU, even if a GPU is available.
+# This helps with VRAM bottlenecks because now it just uses main memory (but is much slower).
 FORCE_CPU = False
 if "--cpu" in sys.argv:
     FORCE_CPU = True
@@ -29,16 +30,17 @@ n_epochs = 100
 batch_size_train = 32
 batch_size_test = 32
 
-# Calculates square dimensions for best image
-def dims_to_square(x: int, y: int) -> tuple[int, int, int, int]:
+ 
+def dims_to_square(x, y):
+    """ Calculates square dimensions for best image. """
     if x > y:
         return ((x-y)/2, 0, y, y)
     else:
         return (0, (y-x)/2, x, x)
 
 
-# Crop sides (or top/bottom) of an image to make it square.
 class Squarer:
+    """ Crop sides (or top/bottom) of an image to make it square. """
     def __init__(self):
         pass
 
@@ -46,11 +48,12 @@ class Squarer:
         x, y = tensor.size[-2:]  # Get the last two dimensions of the tensor.
         return transforms.functional.crop(tensor, *dims_to_square(x, y))
 
+
 # Test if GPU is available, if not CPU is used for computations
 device = "cuda" if torch.cuda.is_available() and not FORCE_CPU else "cpu"
 
 
-# Neural Network Definition 
+# Neural Network Definition
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -130,8 +133,11 @@ test_loader = torch.utils.data.DataLoader(
  batch_size=batch_size_test, shuffle=False)
 
 
-# Loop over the epochs
 def train(epoch):
+    """ Loop over all the training data `epoch` times and train the network.
+    
+    Returns the training loss and accuracy (convenient but aren't the best metrics to use).
+    """
     train_loss = 0
     correct = 0
     total = 0
@@ -172,6 +178,10 @@ def train(epoch):
     return loss, accuracy
 
 def validate():
+    """ Loop over all the validation data and check the performance of the model.
+     
+    This is for use between training epochs.
+    """
     network.eval() # Set the model to evaluate Mode
     val_loss = 0
     correct = 0
@@ -192,6 +202,9 @@ def validate():
 
 
 def test():
+    """Loop over all the final test data and report the performance of the fully trained model.
+    ### Only to be used at the end of training.
+    """
     # set the model to evaluation mode
     network.eval()
     test_loss = 0
@@ -215,6 +228,7 @@ def test():
 
 
 def main():
+    """ Run through training and validation, then test and save the model. """
     best_acc = 0
 
     for epoch in range(n_epochs+1):
@@ -230,5 +244,5 @@ def main():
 
 
 if __name__ == '__main__':
-    # This means we can import the neural network without running training, so we can generate pictures of it.
+    # This means we can import the neural network without running train(), so we can generate pictures of it.
     main()
