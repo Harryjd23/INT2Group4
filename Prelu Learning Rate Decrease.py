@@ -17,9 +17,9 @@ if "--cpu" in sys.argv:
 
 DATA_LOCATION = "files"
 
-IMAGE_W = 128
-IMAGE_H = 128
-IMAGE_MAT_WIDTH = 65536
+IMAGE_W = 80
+IMAGE_H = 80
+IMAGE_MAT_WIDTH = 25600
 
 n_epochs = 125
 batch_size_train = 32
@@ -157,7 +157,7 @@ def train(epoch):
     print(correct,total)
     accuracy = 100 * correct / total
     loss = train_loss / len(train_loader)
-    if epoch == 5:
+    if epoch == 10:
         scheduler.step()
     return loss, accuracy
 
