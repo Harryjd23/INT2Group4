@@ -22,9 +22,9 @@ if "--cpu" in sys.argv:
 DATA_LOCATION = "files"
 
 # Image Dimensions for Transformations
-IMAGE_W = 80
-IMAGE_H = 80
-IMAGE_MAT_WIDTH = 4096
+IMAGE_W = 128
+IMAGE_H = 128
+IMAGE_MAT_WIDTH = 16384
 
 # Hyperparameters
 n_epochs = 200
@@ -97,7 +97,7 @@ class Net(nn.Module):
 criterion = torch.nn.CrossEntropyLoss()
 network = Net().to(device)
 optimizer = optim.Adam(network.parameters(), lr=0.0004, weight_decay = 0.01)
-scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.05, total_iters=15)
+scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.05, total_iters=30)
 
 # Define Transformations for Test/Validation Dataset
 transform1 = transforms.Compose([
