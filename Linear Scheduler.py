@@ -89,8 +89,8 @@ class Net(nn.Module):
 # Define loss function, Neural Network, Optimizer & Scheduler
 criterion = torch.nn.CrossEntropyLoss()
 network = Net().to(device)
-optimizer = optim.Adam(network.parameters(), lr=0.00001, weight_decay = 0.01)
-scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.3, total_iters=20)
+optimizer = optim.Adam(network.parameters(), lr=0.0003, weight_decay = 0.01)
+scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.2, total_iters=20)
 
 # Define Transformations for Test/Validation Dataset
 transform1 = transforms.Compose([
