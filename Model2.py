@@ -20,6 +20,20 @@ n_epochs = 125
 batch_size_train = 32
 batch_size_test = 32
 
+
+def dims_to_square(x: int, y: int) -> tuple[int, int, int, int]:
+    if x > y:
+        return ((x-y)/2, 0, y, y)
+    else:
+        return (0, (y-x)/2, x, x)
+
+
+def tensor_to_square(tensor: torch.Tensor) -> torch.Tensor:
+    x, y = tensor.size()
+    print("tensor size", x, y)
+    return transforms.functional.crop(tensor, *dims_to_square(x, y))
+
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class Net(nn.Module):
@@ -61,8 +75,9 @@ network = Net().to(device)
 optimizer = optim.Adam(network.parameters(), lr=0.00001, weight_decay = 0.01)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.999)
 
-transform1= transforms.Compose([
+transform1 = transforms.Compose([
     transforms.ToTensor(),
+    tensor_to_square,  # The print() statement in this doesn't seem to be outputting.
     transforms.Resize((IMAGE_W, IMAGE_H))])
 """transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])"""  # Resize the images to a consistent size
 
