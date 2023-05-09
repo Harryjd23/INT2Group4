@@ -22,9 +22,9 @@ if "--cpu" in sys.argv:
 DATA_LOCATION = "files"
 
 # Image Dimensions for Transformations
-IMAGE_W = 128
-IMAGE_H = 128
-IMAGE_MAT_WIDTH = 16384
+IMAGE_W = 80
+IMAGE_H = 80
+IMAGE_MAT_WIDTH = 4096
 
 # Hyperparameters
 n_epochs = 200
