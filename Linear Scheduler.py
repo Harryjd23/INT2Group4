@@ -25,7 +25,7 @@ IMAGE_H = 128
 IMAGE_MAT_WIDTH = 65536
 
 # Hyperparameters
-n_epochs = 125
+n_epochs = 100
 batch_size_train = 32
 batch_size_test = 32
 
