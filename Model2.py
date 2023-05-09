@@ -13,6 +13,9 @@ if "--unsafe" in sys.argv:
 
 DATA_LOCATION = "files"
 
+IMAGE_W = 128
+IMAGE_H = 128
+
 n_epochs = 125
 batch_size_train = 32
 batch_size_test = 32
@@ -31,9 +34,8 @@ class Net(nn.Module):
         self.conv4 = nn.Conv2d(512, 1024, kernel_size=3, padding=1)
         self.bn4 = nn.BatchNorm2d(1024)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(16384, 4096)  # Fully Connected layer 1.
+        self.fc1 = nn.Linear(IMAGE_W * IMAGE_H  * 4, 4096)  # Fully Connected layer 1.
         self.fc2 = nn.Linear(4096,102)
-        self.act_final = nn.Softmax(-1)  # Final activation function.
 
     def forward(self, x):
         x = F.relu(self.bn1(self.conv1(x)))
@@ -49,8 +51,6 @@ class Net(nn.Module):
         x = self.fc1(x)
         x = self.fc2(x)
 
-        # Please remove the line below if it does not prove helpful after a lot of training.
-        #x = self.act_final(x)  # This line severely hampers training performance, but I haven't tested what happens after much more training, does it improve accuracy later on?
         return x
 
 # define your loss function
@@ -63,13 +63,13 @@ scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.999)
 
 transform1= transforms.Compose([
     transforms.ToTensor(),
-    transforms.Resize((64, 64))])
+    transforms.Resize((IMAGE_W, IMAGE_H))])
 """transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])"""  # Resize the images to a consistent size
 
 transform2 = transforms.Compose([
     transforms.RandomRotation(25),
     transforms.RandomHorizontalFlip(0.3),
-    transforms.Resize((64,64)),
+    transforms.Resize((IMAGE_W, IMAGE_H)),
     transforms.ToTensor()])
 """transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])"""
 
