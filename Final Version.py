@@ -148,10 +148,10 @@ def train(epoch):
         data = data.to(device)
         target = target.to(device)
 
-        # forward pass through the model
+        # Forward pass through the model
         output = network(data)
 
-        # calculate the loss
+        # Calculate the loss
         loss = criterion(output, target)
 
         # Zero the gradients
