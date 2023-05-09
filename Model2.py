@@ -10,18 +10,23 @@ if "--unsafe" in sys.argv:
     import ssl
     ssl._create_default_https_context = ssl._create_unverified_context
 
+FORCE_CPU = False
+if "--cpu" in sys.argv:
+    FORCE_CPU = True
+
 
 DATA_LOCATION = "files"
 
 IMAGE_W = 128
 IMAGE_H = 128
+IMAGE_MAT_WIDTH = 65536
 
 n_epochs = 125
 batch_size_train = 32
 batch_size_test = 32
 
 
-def dims_to_square(x: int, y: int) -> tuple[int, int, int, int]:
+def dims_to_square(x: int, y: int) -> tuple:
     if x > y:
         return ((x-y)/2, 0, y, y)
     else:
@@ -34,7 +39,7 @@ def tensor_to_square(tensor: torch.Tensor) -> torch.Tensor:
     return transforms.functional.crop(tensor, *dims_to_square(x, y))
 
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda" if torch.cuda.is_available() and not FORCE_CPU else "cpu"
 
 class Net(nn.Module):
     def __init__(self):
@@ -48,7 +53,7 @@ class Net(nn.Module):
         self.conv4 = nn.Conv2d(512, 1024, kernel_size=3, padding=1)
         self.bn4 = nn.BatchNorm2d(1024)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(IMAGE_W * IMAGE_H  * 4, 4096)  # Fully Connected layer 1.
+        self.fc1 = nn.Linear(IMAGE_MAT_WIDTH, 4096)  # Fully Connected layer 1.
         self.fc2 = nn.Linear(4096,102)
 
     def forward(self, x):
@@ -77,7 +82,7 @@ scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.999)
 
 transform1 = transforms.Compose([
     transforms.ToTensor(),
-    tensor_to_square,  # The print() statement in this doesn't seem to be outputting.
+#    tensor_to_square,  # The print() statement in this doesn't seem to be outputting.
     transforms.Resize((IMAGE_W, IMAGE_H))])
 """transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])"""  # Resize the images to a consistent size
 
