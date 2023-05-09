@@ -26,17 +26,21 @@ batch_size_train = 32
 batch_size_test = 32
 
 
-def dims_to_square(x: int, y: int) -> tuple:
+def dims_to_square(x: int, y: int) -> tuple[int, int, int, int]:
     if x > y:
         return ((x-y)/2, 0, y, y)
     else:
         return (0, (y-x)/2, x, x)
 
 
-def tensor_to_square(tensor: torch.Tensor) -> torch.Tensor:
-    x, y = tensor.size()
-    print("tensor size", x, y)
-    return transforms.functional.crop(tensor, *dims_to_square(x, y))
+"""Crop sides (or top/bottom) of an image to make it square."""
+class Squarer:
+    def __init__(self):
+        pass
+
+    def __call__(self, tensor):
+        x, y = tensor.size[-2:]  # Get the last two dimensions of the tensor.
+        return transforms.functional.crop(tensor, *dims_to_square(x, y))
 
 
 device = "cuda" if torch.cuda.is_available() and not FORCE_CPU else "cpu"
@@ -81,17 +85,17 @@ optimizer = optim.Adam(network.parameters(), lr=0.00001, weight_decay = 0.01)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.999)
 
 transform1 = transforms.Compose([
-    transforms.ToTensor(),
-#    tensor_to_square,  # The print() statement in this doesn't seem to be outputting.
-    transforms.Resize((IMAGE_W, IMAGE_H))])
-"""transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])"""  # Resize the images to a consistent size
+    Squarer(),
+    transforms.Resize((IMAGE_W, IMAGE_H)),
+    transforms.ToTensor()])  # Resize the images to a consistent size
 
 transform2 = transforms.Compose([
     transforms.RandomRotation(25),
     transforms.RandomHorizontalFlip(0.3),
+    Squarer(),
     transforms.Resize((IMAGE_W, IMAGE_H)),
     transforms.ToTensor()])
-"""transforms.Normalize(mean =[0.4330, 0.3819, 0.2964], std= [0.2613, 0.2123, 0.2239])])"""
+
 
 train_loader = torch.utils.data.DataLoader(
   torchvision.datasets.Flowers102(DATA_LOCATION,split = "train", download=True,
